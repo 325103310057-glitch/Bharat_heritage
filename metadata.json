@@ -1,0 +1,6 @@
+{
+  "name": "Bharat Heritage",
+  "description": "Explore India's cultural heritage, monuments, states, languages, quizzes, and guide with real Firebase Phone Authentication.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
