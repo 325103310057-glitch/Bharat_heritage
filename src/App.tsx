@@ -75,6 +75,61 @@ const LANGUAGES = [
   { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી', greeting: 'ભારત વારસામાં આપનું સ્વાગત છે' }
 ];
 
+interface StateCulture {
+  id: string;
+  name: string;
+  capital: string;
+  dance: string;
+  art: string;
+  festival: string;
+  cuisine: string;
+}
+
+const STATES_DATA: StateCulture[] = [
+  { id: 'tn', name: 'Tamil Nadu', capital: 'Chennai', dance: 'Bharatanatyam', art: 'Tanjore Painting', festival: 'Pongal', cuisine: 'Idli, Dosa, Chettinad' },
+  { id: 'rj', name: 'Rajasthan', capital: 'Jaipur', dance: 'Ghoomar, Kalbelia', art: 'Miniature Paintings', festival: 'Pushkar Fair, Teej', cuisine: 'Dal Baati Churma' },
+  { id: 'kl', name: 'Kerala', capital: 'Thiruvananthapuram', dance: 'Kathakali, Mohiniyattam', art: 'Mural Paintings', festival: 'Onam, Thrissur Pooram', cuisine: 'Sadya, Appam' },
+  { id: 'od', name: 'Odisha', capital: 'Bhubaneswar', dance: 'Odissi', art: 'Pattachitra', festival: 'Ratha Yatra', cuisine: 'Chhena Poda, Dalma' },
+  { id: 'mh', name: 'Maharashtra', capital: 'Mumbai', dance: 'Lavani', art: 'Warli Painting', festival: 'Ganesh Chaturthi', cuisine: 'Puran Poli, Misal Pav' },
+  { id: 'gj', name: 'Gujarat', capital: 'Gandhinagar', dance: 'Garba, Dandiya', art: 'Rogan Art, Pithora', festival: 'Navratri, Uttarayan', cuisine: 'Dhokla, Thepla, Undhiyu' },
+  { id: 'up', name: 'Uttar Pradesh', capital: 'Lucknow', dance: 'Kathak', art: 'Chikankari Embroidery', festival: 'Kumbh Mela, Diwali', cuisine: 'Awadhi Biryani' },
+  { id: 'pb', name: 'Punjab', capital: 'Chandigarh', dance: 'Bhangra, Giddha', art: 'Phulkari Embroidery', festival: 'Baisakhi, Lohri', cuisine: 'Makki di Roti & Sarson da Saag' }
+];
+
+interface QuizQuestion {
+  question: string;
+  options: string[];
+  correct: number;
+  explanation: string;
+}
+
+const QUIZ_QUESTIONS: QuizQuestion[] = [
+  {
+    question: 'Which monument features 24 stone wheels that function accurately as solar sundials?',
+    options: ['Taj Mahal', 'Konark Sun Temple', 'Hampi Stone Chariot', 'Brihadeeswarar Temple'],
+    correct: 1,
+    explanation: 'The Konark Sun Temple in Odisha has 24 intricately carved stone wheels representing 24 hours, functioning as precision sundials.'
+  },
+  {
+    question: 'Which monolithic temple at Ellora was carved top-down from a single volcanic basalt cliff?',
+    options: ['Kailash Temple (Cave 16)', 'Virupaksha Temple', 'Meenakshi Temple', 'Shore Temple'],
+    correct: 0,
+    explanation: 'Kailash Temple (Cave 16) at Ellora was excavated top-down by carving away over 200,000 tonnes of rock without scaffolding.'
+  },
+  {
+    question: 'Which capital city was known for its musical stone pillars that resonate with musical notes when tapped?',
+    options: ['Pataliputra', 'Vittala Temple, Hampi', 'Fatehpur Sikri', 'Thanjavur'],
+    correct: 1,
+    explanation: 'The Vittala Temple complex at Hampi features 56 musical pillars that produce resonant musical swaras.'
+  },
+  {
+    question: 'What is the UNESCO World Heritage site known for its Buddhist rock-cut cave paintings and frescoes?',
+    options: ['Ajanta Caves', 'Elephanta Caves', 'Badami Caves', 'Udayagiri Caves'],
+    correct: 0,
+    explanation: 'The Ajanta Caves in Maharashtra contain 2nd BCE to 5th CE Buddhist frescoes illustrating the Jataka tales.'
+  }
+];
+
 export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [idToken, setIdToken] = useState<string | null>(null);
@@ -87,6 +142,9 @@ export const App: React.FC = () => {
   const [quizIndex, setQuizIndex] = useState(0);
   const [quizScore, setQuizScore] = useState(0);
   const [quizAnswered, setQuizAnswered] = useState<number | null>(null);
+  const [guideInput, setGuideInput] = useState('');
+  const [guideAnswer, setGuideAnswer] = useState<string | null>(null);
+  const [guideLoading, setGuideLoading] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -120,6 +178,24 @@ export const App: React.FC = () => {
     await firebaseSignOut(auth);
     setAuthStep('LOGIN');
     setPhoneNumber('');
+  };
+
+  const handleAskGuide = async (q: string) => {
+    setGuideLoading(true);
+    setGuideAnswer(null);
+    try {
+      const res = await fetch('/api/ai/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q, language: selectedLanguage.name }),
+      });
+      const data = await res.json();
+      setGuideAnswer(data.answer || 'Answer unavailable.');
+    } catch (e) {
+      setGuideAnswer('Unable to connect to Bharat Heritage backend service.');
+    } finally {
+      setGuideLoading(false);
+    }
   };
 
   const toggleBookmark = (id: string) => {
@@ -310,6 +386,274 @@ export const App: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'STATES' && (
+              <div>
+                <div style={{
+                  background: 'linear-gradient(135deg, #1A237E, #0D47A1)',
+                  padding: '24px',
+                  borderRadius: '16px',
+                  marginBottom: '24px'
+                }}>
+                  <div style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: '#90CAF9' }}>
+                    DIVERSITY IN UNITY
+                  </div>
+                  <h2 style={{ margin: '6px 0 10px', fontSize: '22px', color: '#FFFFFF' }}>
+                    Cultural Traditions Across the States of Bharat
+                  </h2>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#E3F2FD', maxWidth: '650px', lineHeight: '1.5' }}>
+                    From classical Natyashastra dance forms and ancient temple arts to harvest festivals and indigenous cuisines across India.
+                  </p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                  {STATES_DATA.map(st => (
+                    <div key={st.id} style={{
+                      backgroundColor: '#131D2E',
+                      borderRadius: '16px',
+                      padding: '20px',
+                      border: '1px solid #1E2D42'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
+                        <h3 style={{ margin: 0, fontSize: '18px', color: '#FBF8F2' }}>{st.name}</h3>
+                        <span style={{ fontSize: '12px', color: '#D4AF37' }}>{st.capital}</span>
+                      </div>
+                      <div style={{ display: 'grid', gap: '8px', fontSize: '13px' }}>
+                        <div><strong style={{ color: '#FFB74D' }}>Classical Dance:</strong> <span style={{ color: '#CFD8DC' }}>{st.dance}</span></div>
+                        <div><strong style={{ color: '#81C784' }}>Folk/Fine Art:</strong> <span style={{ color: '#CFD8DC' }}>{st.art}</span></div>
+                        <div><strong style={{ color: '#BA68C8' }}>Major Festival:</strong> <span style={{ color: '#CFD8DC' }}>{st.festival}</span></div>
+                        <div><strong style={{ color: '#4DD0E1' }}>Signature Cuisine:</strong> <span style={{ color: '#CFD8DC' }}>{st.cuisine}</span></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'GUIDE' && (
+              <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                <div style={{
+                  background: 'linear-gradient(135deg, #004D40, #00695C)',
+                  padding: '24px',
+                  borderRadius: '16px',
+                  marginBottom: '24px'
+                }}>
+                  <div style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: '#80CBC4' }}>
+                    AI HERITAGE COMPANION (POWERED BY GEMINI)
+                  </div>
+                  <h2 style={{ margin: '6px 0 10px', fontSize: '22px', color: '#FFFFFF' }}>
+                    Ask Bharat Heritage Guide
+                  </h2>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#E0F2F1', lineHeight: '1.5' }}>
+                    Ask questions in any language about ancient architecture, temple geometry, timekeeping, or historical dynasties.
+                  </p>
+                </div>
+
+                <div style={{
+                  backgroundColor: '#131D2E',
+                  padding: '20px',
+                  borderRadius: '16px',
+                  border: '1px solid #1E2D42',
+                  marginBottom: '24px'
+                }}>
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
+                    <input
+                      type="text"
+                      placeholder="e.g., How does the Konark wheel act as a sundial?"
+                      value={guideInput}
+                      onChange={(e) => setGuideInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && guideInput.trim()) {
+                          handleAskGuide(guideInput.trim());
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#0A0F16',
+                        border: '1px solid #1E2D42',
+                        color: '#FBF8F2',
+                        borderRadius: '8px',
+                        padding: '12px 14px',
+                        fontSize: '14px',
+                        outline: 'none'
+                      }}
+                    />
+                    <button
+                      onClick={() => guideInput.trim() && handleAskGuide(guideInput.trim())}
+                      disabled={guideLoading}
+                      style={{
+                        backgroundColor: '#D4AF37',
+                        color: '#0A0F16',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '0 20px',
+                        fontWeight: 'bold',
+                        cursor: guideLoading ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {guideLoading ? 'Inquiring...' : 'Ask AI'}
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {[
+                      'How do Konark sundials tell time?',
+                      'How was Kailash Temple carved at Ellora?',
+                      'Why are Vijayanagara musical pillars unique?',
+                      'Tell me about Buddhist frescoes in Ajanta'
+                    ].map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => {
+                          setGuideInput(q);
+                          handleAskGuide(q);
+                        }}
+                        style={{
+                          background: 'rgba(212, 175, 55, 0.1)',
+                          border: '1px solid rgba(212, 175, 55, 0.3)',
+                          color: '#D4AF37',
+                          borderRadius: '16px',
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+
+                  {guideAnswer && (
+                    <div style={{
+                      marginTop: '20px',
+                      backgroundColor: '#0D1522',
+                      padding: '18px',
+                      borderRadius: '12px',
+                      borderLeft: '4px solid #D4AF37',
+                      fontSize: '14px',
+                      lineHeight: '1.6',
+                      color: '#E0E6ED'
+                    }}>
+                      <div style={{ fontSize: '11px', color: '#D4AF37', fontWeight: 'bold', marginBottom: '6px', letterSpacing: '1px' }}>
+                        HERITAGE GUIDE EXPLANATION
+                      </div>
+                      {guideAnswer}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'QUIZ' && (
+              <div style={{ maxWidth: '650px', margin: '0 auto' }}>
+                <div style={{
+                  background: 'linear-gradient(135deg, #4A148C, #6A1B9A)',
+                  padding: '24px',
+                  borderRadius: '16px',
+                  marginBottom: '24px'
+                }}>
+                  <div style={{ fontSize: '11px', letterSpacing: '2px', fontWeight: 'bold', color: '#CE93D8' }}>
+                    TEST YOUR CIVILIZATIONAL KNOWLEDGE
+                  </div>
+                  <h2 style={{ margin: '6px 0 10px', fontSize: '22px', color: '#FFFFFF' }}>
+                    Bharat Heritage Quiz
+                  </h2>
+                  <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: '#F3E5F5' }}>
+                    <span>Score: <strong>{quizScore} pts</strong></span>
+                    <span>Question {quizIndex + 1} of {QUIZ_QUESTIONS.length}</span>
+                  </div>
+                </div>
+
+                <div style={{
+                  backgroundColor: '#131D2E',
+                  padding: '24px',
+                  borderRadius: '16px',
+                  border: '1px solid #1E2D42'
+                }}>
+                  <h3 style={{ margin: '0 0 16px', fontSize: '17px', color: '#FBF8F2', lineHeight: '1.4' }}>
+                    {QUIZ_QUESTIONS[quizIndex].question}
+                  </h3>
+
+                  <div style={{ display: 'grid', gap: '10px', marginBottom: '20px' }}>
+                    {QUIZ_QUESTIONS[quizIndex].options.map((opt, i) => {
+                      const isSelected = quizAnswered === i;
+                      const isCorrect = i === QUIZ_QUESTIONS[quizIndex].correct;
+                      let bg = '#0A0F16';
+                      let border = '#1E2D42';
+                      if (quizAnswered !== null) {
+                        if (isCorrect) {
+                          bg = 'rgba(76, 175, 80, 0.2)';
+                          border = '#4CAF50';
+                        } else if (isSelected) {
+                          bg = 'rgba(239, 83, 80, 0.2)';
+                          border = '#EF5350';
+                        }
+                      }
+                      return (
+                        <button
+                          key={opt}
+                          disabled={quizAnswered !== null}
+                          onClick={() => {
+                            setQuizAnswered(i);
+                            if (i === QUIZ_QUESTIONS[quizIndex].correct) {
+                              setQuizScore(s => s + 25);
+                            }
+                          }}
+                          style={{
+                            padding: '14px 16px',
+                            borderRadius: '10px',
+                            border: `1px solid ${border}`,
+                            backgroundColor: bg,
+                            color: '#FBF8F2',
+                            textAlign: 'left',
+                            fontSize: '14px',
+                            cursor: quizAnswered !== null ? 'default' : 'pointer'
+                          }}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {quizAnswered !== null && (
+                    <div style={{
+                      backgroundColor: '#0D1522',
+                      padding: '14px',
+                      borderRadius: '8px',
+                      marginBottom: '16px',
+                      fontSize: '13px',
+                      color: '#B0BEC5',
+                      lineHeight: '1.5'
+                    }}>
+                      <strong style={{ color: '#CAD1DC' }}>Historical Context: </strong>
+                      {QUIZ_QUESTIONS[quizIndex].explanation}
+                    </div>
+                  )}
+
+                  {quizAnswered !== null && (
+                    <button
+                      onClick={() => {
+                        setQuizAnswered(null);
+                        setQuizIndex((prev) => (prev + 1) % QUIZ_QUESTIONS.length);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        backgroundColor: '#D4AF37',
+                        color: '#0A0F16',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {quizIndex + 1 < QUIZ_QUESTIONS.length ? 'Next Question →' : 'Restart Quiz ↺'}
+                    </button>
+                  )}
                 </div>
               </div>
             )}

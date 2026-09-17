@@ -14,6 +14,9 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import * as admin from 'firebase-admin';
+import path from 'path';
+import fs from 'fs';
+import http from 'http';
 
 dotenv.config();
 
@@ -236,6 +239,83 @@ app.post('/api/bookmarks', verifyFirebaseToken, (req: AuthenticatedRequest, res:
   });
 });
 
-app.listen(PORT, () => {
+/**
+ * AI Cultural Heritage Guide Endpoint (Gemini Integration)
+ * Supports natural language exploration of Indian heritage, monuments, and history.
+ */
+app.post('/api/ai/ask', async (req: Request, res: Response) => {
+  const { question, language = 'English' } = req.body;
+
+  if (!question) {
+    res.status(400).json({ error: 'question is required' });
+    return;
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    // Provide curated historical responses when GEMINI_API_KEY is not yet configured on Render
+    res.json({
+      answer: `Namaste! As your Bharat Heritage Guide: You asked about "${question}". India's 5,000-year civilizational journey encompasses remarkable achievements in monolithic rock architecture (such as Kailash Temple at Ellora), astronomical sundials (Konark Sun Temple and Jantar Mantar), and spiritual heritage. To enable live Gemini AI queries, set GEMINI_API_KEY in Render environment variables.`,
+      source: 'curated_heritage_guide',
+    });
+    return;
+  }
+
+  try {
+    const prompt = `You are a respectful, scholarly, and captivating Indian Cultural & Historical Heritage Guide for Bharat Heritage.
+User Question: "${question}"
+Response Language: ${language}
+Provide an authentic, historically accurate, and engaging answer with cultural context and architectural marvels. Keep it under 180 words.`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.warn('Gemini API call failed:', errText);
+      res.json({
+        answer: `Namaste! Regarding "${question}": India's monuments and philosophy represent centuries of architectural genius and timeless wisdom.`,
+        source: 'fallback',
+      });
+      return;
+    }
+
+    const data: any = await response.json();
+    const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+    res.json({ answer, source: 'gemini' });
+  } catch (error: any) {
+    console.error('Error invoking Gemini API:', error);
+    res.status(500).json({ error: 'Failed to query AI Guide', details: error.message });
+  }
+});
+
+// Serve frontend static build if available (for Render deployment)
+const distPath = path.resolve(process.cwd(), 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (req: Request, res: Response) => {
+    if (!req.path.startsWith('/api')) {
+      const indexPath = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+        return;
+      }
+    }
+    res.status(404).json({ error: 'Endpoint not found' });
+  });
+}
+
+const server = http.createServer(app);
+
+server.listen(PORT, () => {
   console.log(`🏛️ Bharat Heritage Backend listening on port ${PORT}`);
 });
